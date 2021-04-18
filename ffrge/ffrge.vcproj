@@ -187,6 +187,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\utils.c"
+				>
+			</File>
+			<File
 				RelativePath=".\window.c"
 				>
 			</File>
@@ -202,6 +206,10 @@
 			</File>
 			<File
 				RelativePath=".\screen.h"
+				>
+			</File>
+			<File
+				RelativePath=".\utils.h"
 				>
 			</File>
 			<File
