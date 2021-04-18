@@ -26,8 +26,8 @@ void bitmap_destroy(BMP *pb, int flags)
     else { free(pb->pdata); pb->pdata = NULL; }
 }
 
-void bitmap_lock  (BMP *pb) { if (pb && pb->lock  ) pb->lock  (pb); }
-void bitmap_unlock(BMP *pb) { if (pb && pb->unlock) pb->unlock(pb); }
+void bitmap_lock  (BMP *pb)            { if (pb && pb->lock  ) pb->lock(pb);          }
+void bitmap_unlock(BMP *pb, int flags) { if (pb && pb->unlock) pb->unlock(pb, flags); }
 
 /* 内部类型定义 */
 /* BMP 文件结构类型定义 */
@@ -98,7 +98,7 @@ void bitmap_load(BMP *pb, char *file)
             pdst -= 2 * pb->stride;
         }
     }
-    bitmap_unlock(pb);
+    bitmap_unlock(pb, 0);
 
 done:
     if (fp) fclose(fp);

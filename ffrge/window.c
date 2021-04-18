@@ -8,7 +8,7 @@
 static void _gdi_bmp_create (void *pb);
 static void _gdi_bmp_destroy(void *pb, int flags);
 static void _gdi_bmp_lock   (void *pb);
-static void _gdi_bmp_unlock (void *pb);
+static void _gdi_bmp_unlock (void *pb, int flags);
 static LRESULT CALLBACK RGE_GDI_WNDPROC(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 static HWND      s_gdi_hwnd  = NULL;
@@ -99,7 +99,16 @@ static void _gdi_bmp_destroy(void *pb, int flags)
 }
 
 static void _gdi_bmp_lock  (void *pb) {}
-static void _gdi_bmp_unlock(void *pb) { if (s_gdi_hwnd) InvalidateRect(s_gdi_hwnd, NULL, FALSE); }
+static void _gdi_bmp_unlock(void *pb, int flags)
+{
+    if (s_gdi_hwnd) {
+        if (flags) {
+            HDC hdc = GetDC(s_gdi_hwnd);
+            BitBlt(hdc, 0, 0, ((BMP*)pb)->width, ((BMP*)pb)->height, s_gdi_hdc, 0, 0, SRCCOPY);
+            ReleaseDC(s_gdi_hwnd ,hdc);
+        } else InvalidateRect(s_gdi_hwnd, NULL, FALSE);
+    }
+}
 
 static LRESULT CALLBACK RGE_GDI_WNDPROC(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {

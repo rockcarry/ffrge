@@ -143,7 +143,7 @@ typedef void*(WINAPI *PFN_DirectDrawCreate)(void *guid, void **lpddraw, void *iu
 static void _ddraw_bmp_create (void *pb);
 static void _ddraw_bmp_destroy(void *pb, int flags);
 static void _ddraw_bmp_lock   (void *pb);
-static void _ddraw_bmp_unlock (void *pb);
+static void _ddraw_bmp_unlock (void *pb, int flags);
 static LRESULT CALLBACK RGE_DDRAW_WNDPROC(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 static HWND                s_ddraw_hwnd  = NULL;
@@ -236,7 +236,7 @@ static void _ddraw_bmp_lock(void *pb)
     pbmp->stride = ddsd.lPitch;
 }
 
-static void _ddraw_bmp_unlock(void *pb)
+static void _ddraw_bmp_unlock(void *pb, int flags)
 {
     if (s_lpDDSPrimary) s_lpDDSPrimary->pVtbl->Unlock(s_lpDDSPrimary, NULL);
     ((BMP*)pb)->pdata = NULL;
