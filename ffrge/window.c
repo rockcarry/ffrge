@@ -99,32 +99,24 @@ static void _gdi_bmp_destroy(void *pb, int flags)
 }
 
 static void _gdi_bmp_lock  (void *pb) {}
-static void _gdi_bmp_unlock(void *pb) { InvalidateRect(s_gdi_hwnd, NULL, FALSE); }
+static void _gdi_bmp_unlock(void *pb) { if (s_gdi_hwnd) InvalidateRect(s_gdi_hwnd, NULL, FALSE); }
 
 static LRESULT CALLBACK RGE_GDI_WNDPROC(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     PAINTSTRUCT ps = {0};
     HDC        hdc = NULL;
-
     switch (uMsg) {
     case WM_PAINT:
         hdc = BeginPaint(hwnd, &ps);
-        BitBlt(hdc,
-            ps.rcPaint.left,
-            ps.rcPaint.top,
+        BitBlt(hdc, ps.rcPaint.left, ps.rcPaint.top,
             ps.rcPaint.right  - ps.rcPaint.left,
             ps.rcPaint.bottom - ps.rcPaint.top,
-            s_gdi_hdc,
-            ps.rcPaint.left,
-            ps.rcPaint.top,
-            SRCCOPY);
+            s_gdi_hdc, ps.rcPaint.left, ps.rcPaint.top, SRCCOPY);
         EndPaint(hwnd, &ps);
         return 0;
-
     case WM_DESTROY:
         PostQuitMessage(0);
         return 0;
-
     default:
         return DefWindowProc(hwnd, uMsg, wParam, lParam);
     }

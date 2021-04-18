@@ -55,28 +55,51 @@ void bitmap_load(BMP *pb, char *file)
 {
     FILE   *fp = NULL;
     BMPFILE bmpfile;
+
     if (!pb || !file || !(fp = fopen(file, "rb"))) return;
     if (sizeof(bmpfile) != fread(&bmpfile, 1, sizeof(bmpfile), fp)) goto done;
     if (bmpfile.filetype != (('B' << 0) | ('M' << 8))) goto done;
     bitmap_create(pb, bmpfile.imagewidth, bmpfile.imageheight);
+
     bitmap_lock(pb);
     if (pb->pdata) {
-        uint8_t  *pdst = (uint8_t*)pb->pdata + (pb->height - 1) * pb->stride;
-        int       skip = (4 - (bmpfile.imagewidth * bmpfile.bitsperpixel / 8) & 0x3) & 0x3;
-        int       i, j;
+        uint8_t *pdst = (uint8_t*)pb->pdata + (pb->height - 1) * pb->stride;
+        int      skip = (4 - ((bmpfile.imagewidth * bmpfile.bitsperpixel + 7) / 8) & 0x3) & 0x3, i, j;
+        uint8_t  pal[256 * 4], c1, c2, r, g, b, a = 0;
+        if (bmpfile.bitsperpixel == 4 || bmpfile.bitsperpixel == 8) {
+            fseek(fp, sizeof(BMPFILE), SEEK_SET);
+            fread(pal, 1, (1 << bmpfile.bitsperpixel) * 4, fp);
+        }
         fseek(fp, bmpfile.dataoffset, SEEK_SET);
         for (i = 0; i < pb->height; i++) {
             for (j = 0; j < pb->width; j++) {
-                *pdst++ = fgetc(fp);
-                *pdst++ = fgetc(fp);
-                *pdst++ = fgetc(fp);
-                *pdst++ = 0;
+                switch (bmpfile.bitsperpixel) {
+                case 1:
+                    if (!(j & 7)) {
+                        c1 = fgetc(fp);
+                    }
+                    r = g = b = (c1 & (1 << 7)) ? 255 : 0;
+                    c1 <<= 1;
+                    break;
+                case 4: case 8:
+                    if (bmpfile.bitsperpixel == 4) {
+                        if (!(j & 1)) c1 = fgetc(fp);
+                        c2 = c1 >> 4;
+                        c1 = c1 << 4;
+                    } else c2 = fgetc(fp);
+                    b = pal[c2 * 4 + 0]; g = pal[c2 * 4 + 1]; r = pal[c2 * 4 + 2];
+                    break;
+                case 24: b = fgetc(fp); g = fgetc(fp); r = fgetc(fp); break;
+                case 32: b = fgetc(fp); g = fgetc(fp); r = fgetc(fp); a = fgetc(fp); break;
+                }
+                *pdst++ = b; *pdst++ = g; *pdst++ = r; *pdst++ = a;
             }
             fseek(fp, skip, SEEK_CUR);
             pdst -= 2 * pb->stride;
         }
     }
     bitmap_unlock(pb);
+
 done:
     if (fp) fclose(fp);
 }
