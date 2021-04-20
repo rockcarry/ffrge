@@ -24,6 +24,7 @@ void bitmap_load    (BMP *pb, char *file);
 void bitmap_save    (BMP *pb, char *file);
 void bitmap_putpixel(BMP *pb, int x, int y, int c);
 int  bitmap_getpixel(BMP *pb, int x, int y);
+void bitmap_line    (BMP *pb, int x1, int y1, int x2, int y2, int c);
 
 #ifdef __cplusplus
 }

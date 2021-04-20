@@ -149,3 +149,48 @@ int bitmap_getpixel(BMP *pb, int x, int y)
         return *(uint32_t*)((uint8_t*)pb->pdata + y * pb->stride + x * sizeof(uint32_t));
     } else return 0;
 }
+
+void bitmap_line(BMP *pb, int x1, int y1, int x2, int y2, int c)
+{
+    int x, y, dx, dy, e;
+
+    dx = abs(x1 - x2);
+    dy = abs(y1 - y2);
+    e  = -dx;
+
+    if (dy < dx) {
+        if (x1 > x2) {
+            x  = x1; x1 = x2; x2 = x;
+            y  = y1; y1 = y2; y2 = y;
+        }
+
+        y = y1; x = x1;
+        while (x <= x2) {
+            bitmap_putpixel(pb, x, y, c);
+            e += dy * 2;
+            if (e >= 0) {
+                if (y1 < y2) y++;
+                else y--;
+                e -= dx * 2;
+            }
+            x++;
+        }
+    } else {
+        if (y1 > y2) {
+            x  = x1; x1 = x2; x2 = x;
+            y  = y1; y1 = y2; y2 = y;
+        }
+
+        y = y1; x = x1;
+        while (y <= y2) {
+            bitmap_putpixel(pb, x, y, c);
+            e += dx * 2;
+            if (e > 0) {
+                if (x1 < x2) x++;
+                else x--;
+                e -= dy * 2;
+            }
+            y++;
+        }
+    }
+}
