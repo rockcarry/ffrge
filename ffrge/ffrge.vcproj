@@ -183,15 +183,15 @@
 				>
 			</File>
 			<File
+				RelativePath=".\input.c"
+				>
+			</File>
+			<File
 				RelativePath=".\screen.c"
 				>
 			</File>
 			<File
 				RelativePath=".\utils.c"
-				>
-			</File>
-			<File
-				RelativePath=".\window.c"
 				>
 			</File>
 		</Filter>
@@ -205,15 +205,15 @@
 				>
 			</File>
 			<File
+				RelativePath=".\input.h"
+				>
+			</File>
+			<File
 				RelativePath=".\screen.h"
 				>
 			</File>
 			<File
 				RelativePath=".\utils.h"
-				>
-			</File>
-			<File
-				RelativePath=".\window.h"
 				>
 			</File>
 		</Filter>

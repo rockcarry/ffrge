@@ -8,6 +8,7 @@ extern "C" {
 #endif
 
 extern BMP SCREEN;
+extern BMP WINDOW;
 
 #ifdef __cplusplus
 }
