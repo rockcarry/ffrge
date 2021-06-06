@@ -4,6 +4,7 @@
 #include <string.h>
 #include "bitmap.h"
 
+#pragma warning(disable:4311)
 #pragma warning(disable:4996)
 
 #define DEF_BITMAP_WIDTH   640
@@ -150,6 +151,57 @@ int bitmap_getpixel(BMP *pb, int x, int y)
     } else return 0;
 }
 
+void bitmap_scanline(BMP *pb, int x1, int x2, int y, int type, int color, void *data, int orgx, int orgy)
+{
+    BMP      *srcbmp = (BMP*)data;
+    uint32_t *psrc, *pdst, *pend, maskc;
+    int       srcx, srcy, rasterw, rasterh, rstride, curbit;
+    uint8_t  *pstart, *pcurbyte;
+    if (!pb || y < 0 || y >= pb->height) return;
+    x1  = x1 > 0 ? x1 : 0; x1 = x1 < pb->width ? x1 : pb->width - 1;
+    x2  = x2 > 0 ? x2 : 0; x2 = x2 < pb->width ? x2 : pb->width - 1;
+    pdst= (uint32_t*)((uint8_t*)pb->pdata + y * pb->stride + x1 * sizeof(uint32_t));
+    pend= pdst + (x2 - x1);
+    switch (type & 0xF) {
+    case FILL_COLOR : while (pdst <= pend) { *pdst++ = (uint32_t)color; } break;
+    case FILL_BITMAP:
+        srcx = (uint32_t)(x1 + orgx) % srcbmp->width ;
+        srcy = (uint32_t)(y  + orgy) % srcbmp->height;
+        psrc = (uint32_t*)((uint8_t*)srcbmp->pdata + srcy * srcbmp->stride + srcx * sizeof(uint32_t));
+        maskc= type >> 4;
+        if (maskc & (1 <<24)) {
+            maskc = (maskc & (1 << 25)) ? *(uint32_t*)srcbmp->pdata : maskc & 0xFFFFFF;
+            while (pdst <= pend) {
+                if (*psrc != maskc) *pdst = *psrc;
+                pdst++, psrc++;
+                if (++srcx == srcbmp->width) { srcx = 0; psrc = (uint32_t*)((uint8_t*)srcbmp->pdata + srcy * srcbmp->stride); }
+            }
+        } else {
+            while (pdst <= pend) {
+                *pdst++ = *psrc++;
+                if (++srcx == srcbmp->width) { srcx = 0; psrc = (uint32_t*)((uint8_t*)srcbmp->pdata + srcy * srcbmp->stride); }
+            }
+        }
+        break;
+    case FILL_RASTER:
+        rasterw = (type >> 4 ) & 0x3FFF;
+        rasterh = (type >> 18) & 0x3FFF;
+        rstride = (rasterw + 0x7) & ~0x7;
+        srcx    = (uint32_t)(x1 + orgx) % rasterw;
+        srcy    = (uint32_t)(y  + orgy) % rasterh;
+        pstart  = (uint8_t*)data + (srcy * rstride / 8);
+        pcurbyte= pstart + srcx / 8;
+        curbit  = 7 - srcx % 8;
+        while (pdst <= pend) {
+            if (*pcurbyte & (1 << curbit)) *pdst = color;
+            pdst++; srcx++; curbit--;
+            if (srcx == rasterw)   { curbit = 7; pcurbyte = pstart; srcx = 0; }
+            else if (curbit == -1) { curbit = 7; pcurbyte++; }
+        }
+        break;
+    }
+}
+
 void bitmap_line(BMP *pb, int x1, int y1, int x2, int y2, int c)
 {
     int x, y, dx, dy, e;
@@ -194,3 +246,37 @@ void bitmap_line(BMP *pb, int x1, int y1, int x2, int y2, int c)
         }
     }
 }
+
+#ifdef _TEST_BITMAP_
+#include <windows.h>
+#include "screen.h"
+int PASCAL WinMain(HINSTANCE hInst, HINSTANCE hPreInst, LPSTR lpszCmdLine, int nCmdShow)
+{
+    BMP mybmp = {0};
+    int i;
+    static uint8_t raster_data[] = {
+        0xFF, 0xFF,
+        0x80, 0x80,
+        0x80, 0x80,
+        0x80, 0x80,
+        0x80, 0x80,
+    };
+    bitmap_create(&WINDOW, 640, 480);
+    bitmap_load(&mybmp, "me.bmp");
+    bitmap_lock(&WINDOW);
+    for (i=10; i<470; i++) {
+        bitmap_scanline(&WINDOW, 10, 630, i, FILL_RASTER|FILL_RASTERW(13)|FILL_RASTERH(5), RGB(0, 255, 0), (void*)raster_data, 0, 0);
+    }
+    for (i=100; i<200; i++) {
+        bitmap_scanline(&WINDOW, 100, 200, i, FILL_BITMAP, 0, (void*)&mybmp, -100, -100);
+    }
+    for (i=100; i<200; i++) {
+        bitmap_scanline(&WINDOW, 250, 350, i, FILL_COLOR, RGB(0, 255, 0), NULL, 0, 0);
+    }
+
+    bitmap_unlock(&WINDOW, 0);
+    bitmap_destroy(&mybmp, 0);
+    bitmap_destroy(&WINDOW, 0);
+    return 0;
+}
+#endif
