@@ -6,18 +6,21 @@ extern "C" {
 #endif
 
 enum {
-    INPUT_TYPE_TIMER = 1, // val1 - timer id
-    INPUT_TYPE_KEY,       // val1 - keycode , val2 - key state
-    INPUT_TYPE_MOUSE,     // val1 - x       , val2 - y
-    INPUT_TYPE_WHEEL,     // val1 - wheel value
+    INPUT_EVENT_TIMER = 1,   // val1 - timer id
+    INPUT_EVENT_KEY,         // val1 - keycode, val2 - key state
+    INPUT_EVENT_MOUSE_MOVE,  // val1 - x, val2 - y, val3 - button state
+    INPUT_EVENT_LBUTTON_DOWN,// val1 - x, val2 - y, val3 - button state
+    INPUT_EVENT_LBUTTON_UP,  // val1 - x, val2 - y, val3 - button state
+    INPUT_EVENT_MBUTTON_DOWN,// val1 - x, val2 - y, val3 - button state
+    INPUT_EVENT_MBUTTON_UP,  // val1 - x, val2 - y, val3 - button state
+    INPUT_EVENT_RBUTTON_DOWN,// val1 - x, val2 - y, val3 - button state
+    INPUT_EVENT_RBUTTON_UP,  // val1 - x, val2 - y, val3 - button state
+    INPUT_EVENT_MOUSE_WHELL, // val1 - wheel value
 };
 
 enum {
-    INPUT_KEY_LBUTTON   = 0x01,
-    INPUT_KEY_RBUTTON   = 0x02,
     INPUT_KEY_BACKSPACE = 0x08,
     INPUT_KEY_TAB       = 0x09,
-    INPUT_KEY_MBUTTON   = 0x04,
     INPUT_KEY_CAPSLOCK  = 0x14,
     INPUT_KEY_SHIFT     = 0x10,
     INPUT_KEY_CTRL      = 0x11,
@@ -67,12 +70,12 @@ enum {
     INPUT_KEY_QUOT,
 };
 
-typedef void (*INPUTCALLBACK)(void *cbctxt, int type, int val1, int val2);
+typedef void (*INPUTCALLBACK)(void *cbctxt, int type, int val1, int val2, int val3);
 void input_init(INPUTCALLBACK callback, void *cbctxt); // should be called after WINDOW or SCREEN bitmap created
 void input_exit(void);
 void input_settimer(int id, int interval);
 int  input_getkey  (int key);
-void input_getmouse(int *x, int *y);
+void input_getmouse(int *x, int *y, int *btns);
 void input_setmouse(int  x, int  y);
 
 #ifdef __cplusplus
