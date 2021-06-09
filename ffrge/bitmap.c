@@ -151,19 +151,28 @@ int bitmap_getpixel(BMP *pb, int x, int y)
     } else return 0;
 }
 
+static uint32_t alpha_blend(uint32_t c1, uint32_t c2, int alpha)
+{
+    uint64_t t1 = (c1 & 0xFF00FF) | (((uint64_t)c1 & 0x00FF00) << 24);
+    uint64_t t2 = (c2 & 0xFF00FF) | (((uint64_t)c2 & 0x00FF00) << 24);
+    uint64_t t3 = (t1 * (256 - alpha) + t2 * alpha) >> 8;
+    return (uint32_t)((t3 & 0xFF00FF) | (t3 >> 24) & 0x00FF00);
+}
+
 void bitmap_scanline(BMP *pb, int x1, int x2, int y, int type, int color, void *data, int orgx, int orgy)
 {
     BMP      *srcbmp = (BMP*)data;
     uint32_t *psrc, *pdst, *pend, maskc;
-    int       srcx, srcy, rasterw, rasterh, rstride, curbit;
+    int       srcx, srcy, rasterw, rasterh, rstride, curbit, alpha;
     uint8_t  *pstart, *pcurbyte;
     if (!pb || y < 0 || y >= pb->height) return;
-    x1  = x1 > 0 ? x1 : 0; x1 = x1 < pb->width ? x1 : pb->width - 1;
-    x2  = x2 > 0 ? x2 : 0; x2 = x2 < pb->width ? x2 : pb->width - 1;
-    pdst= (uint32_t*)((uint8_t*)pb->pdata + y * pb->stride + x1 * sizeof(uint32_t));
-    pend= pdst + (x2 - x1);
+    x1    = x1 > 0 ? x1 : 0; x1 = x1 < pb->width ? x1 : pb->width - 1;
+    x2    = x2 > 0 ? x2 : 0; x2 = x2 < pb->width ? x2 : pb->width - 1;
+    pdst  = (uint32_t*)((uint8_t*)pb->pdata + y * pb->stride + x1 * sizeof(uint32_t));
+    pend  = pdst + (x2 - x1);
+    alpha = (uint8_t)(color >> 24);
     switch (type & 0xF) {
-    case FILL_COLOR : while (pdst <= pend) { *pdst++ = (uint32_t)color; } break;
+    case FILL_COLOR : while (pdst <= pend) { *pdst = (alpha == 0) ? (uint32_t)color : alpha_blend(*pdst, color, alpha); pdst++; } break;
     case FILL_BITMAP:
         srcx = (uint32_t)(x1 + orgx) % srcbmp->width ;
         srcy = (uint32_t)(y  + orgy) % srcbmp->height;
@@ -172,13 +181,14 @@ void bitmap_scanline(BMP *pb, int x1, int x2, int y, int type, int color, void *
         if (maskc & (1 <<24)) {
             maskc = (maskc & (1 << 25)) ? *(uint32_t*)srcbmp->pdata : maskc & 0xFFFFFF;
             while (pdst <= pend) {
-                if (*psrc != maskc) *pdst = *psrc;
+                if (*psrc != maskc) *pdst = (alpha == 0) ? (uint32_t)*psrc : alpha_blend(*pdst, *psrc, alpha);
                 pdst++, psrc++;
                 if (++srcx == srcbmp->width) { srcx = 0; psrc = (uint32_t*)((uint8_t*)srcbmp->pdata + srcy * srcbmp->stride); }
             }
         } else {
             while (pdst <= pend) {
-                *pdst++ = *psrc++;
+                *pdst = (alpha == 0) ? (uint32_t)*psrc : alpha_blend(*pdst, *psrc, alpha);
+                pdst++, psrc++;
                 if (++srcx == srcbmp->width) { srcx = 0; psrc = (uint32_t*)((uint8_t*)srcbmp->pdata + srcy * srcbmp->stride); }
             }
         }
@@ -193,7 +203,7 @@ void bitmap_scanline(BMP *pb, int x1, int x2, int y, int type, int color, void *
         pcurbyte= pstart + srcx / 8;
         curbit  = 7 - srcx % 8;
         while (pdst <= pend) {
-            if (*pcurbyte & (1 << curbit)) *pdst = color;
+            if (*pcurbyte & (1 << curbit)) *pdst = (alpha == 0) ? (uint32_t)color : alpha_blend(*pdst, color, alpha);
             pdst++; srcx++; curbit--;
             if (srcx == rasterw)   { curbit = 7; pcurbyte = pstart; srcx = 0; }
             else if (curbit == -1) { curbit = 7; pcurbyte++; }
@@ -265,7 +275,7 @@ int PASCAL WinMain(HINSTANCE hInst, HINSTANCE hPreInst, LPSTR lpszCmdLine, int n
     bitmap_load(&mybmp, "me.bmp");
     bitmap_lock(&WINDOW);
     for (i=10; i<470; i++) {
-        bitmap_scanline(&WINDOW, 10, 630, i, FILL_RASTER|FILL_RASTERW(13)|FILL_RASTERH(5), RGB(0, 255, 0), (void*)raster_data, 0, 0);
+        bitmap_scanline(&WINDOW, 10 , 630, i, FILL_RASTER|FILL_RASTERW(13)|FILL_RASTERH(5), RGB(0, 255, 0), (void*)raster_data, 0, 0);
     }
     for (i=100; i<200; i++) {
         bitmap_scanline(&WINDOW, 100, 200, i, FILL_BITMAP, 0, (void*)&mybmp, -100, -100);
