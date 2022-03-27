@@ -166,6 +166,7 @@ void bitmap_scanline(BMP *pb, int x1, int x2, int y, int type, int color, void *
     int       srcx, srcy, rasterw, rasterh, rstride, curbit, alpha;
     uint8_t  *pstart, *pcurbyte;
     if (!pb || y < 0 || y >= pb->height) return;
+    if (!data) type = FILL_COLOR;
     x1    = x1 > 0 ? x1 : 0; x1 = x1 < pb->width ? x1 : pb->width - 1;
     x2    = x2 > 0 ? x2 : 0; x2 = x2 < pb->width ? x2 : pb->width - 1;
     pdst  = (uint32_t*)((uint8_t*)pb->pdata + y * pb->stride + x1 * sizeof(uint32_t));
@@ -257,6 +258,31 @@ void bitmap_line(BMP *pb, int x1, int y1, int x2, int y2, int c)
     }
 }
 
+void bitmap_rect(BMP *pb, int x1, int y1, int x2, int y2, int type, int color, void *data, int orgx, int orgy)
+{
+    if (type == 0) {
+        bitmap_line(pb, x1, y1, x2, y1, color);
+        bitmap_line(pb, x1, y2, x2, y2, color);
+        bitmap_line(pb, x1, y1, x1, y2, color);
+        bitmap_line(pb, x2, y1, x2, y2, color);
+    } else {
+        int  i;
+        for (i = y1; i <= y2; i++) bitmap_scanline(pb, x1, x2, i, type, color, data, orgx, orgy);
+    }
+}
+
+void bitmap_bitblt(BMP *pbdst, int dstx, int dsty, BMP *pbsrc, int srcx, int srcy, int srcw, int srch, int type)
+{
+    if (srcw > pbsrc->width  - srcx) srcw = pbsrc->width  - srcx;
+    if (srch > pbsrc->height - srcy) srch = pbsrc->height - srcy;
+    bitmap_rect(pbdst, dstx, dsty, dstx + srcw - 1, dsty + srch - 1, type, 0, pbsrc, srcx - dstx, srcy - dsty);
+}
+
+void bitmap_putbmp(BMP *pbdst, int x, int y, BMP *pbsrc, int type)
+{
+    bitmap_bitblt(pbdst, x, y, pbsrc, 0, 0, pbsrc->width, pbsrc->height, type);
+}
+
 #ifdef _TEST_BITMAP_
 #include <windows.h>
 #include "screen.h"
@@ -283,6 +309,7 @@ int PASCAL WinMain(HINSTANCE hInst, HINSTANCE hPreInst, LPSTR lpszCmdLine, int n
     for (i=100; i<200; i++) {
         bitmap_scanline(&WINDOW, 250, 350, i, FILL_COLOR, RGB(0, 255, 0), NULL, 0, 0);
     }
+    bitmap_putbmp(&WINDOW, 0, 0, &mybmp, FILL_BITMAP);
 
     bitmap_unlock(&WINDOW, 0);
     bitmap_destroy(&mybmp, 0);
